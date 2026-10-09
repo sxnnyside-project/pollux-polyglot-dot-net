@@ -90,9 +90,18 @@ jobs:
       - name: Build NuGet Package with Bundled Native Runtimes
         run: just pack
 
-      - name: Publish to NuGet (Trusted Publishing via OIDC)
+      - name: NuGet Login (OIDC Trusted Publishing)
+        id: nuget-login
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: Sxnnyside
+
+      - name: Publish to NuGet
         run: |
-          dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate
+          dotnet nuget push ./artifacts/*.nupkg \
+            --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
 
       - name: Create GitHub Release
         env:
