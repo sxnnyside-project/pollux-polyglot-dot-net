@@ -60,22 +60,14 @@ jobs:
       - name: Setup Pollux Core native library
         run: |
           git clone --depth 1 https://github.com/sxnnyside-project/pollux-polyglot-native-bridge.git ../pollux-polyglot-native-bridge
-          cargo build --release --manifest-path ../pollux-polyglot-native-bridge/Cargo.toml
+          cargo test --manifest-path ../pollux-polyglot-native-bridge/Cargo.toml --no-run
+          LIB_FILE=$(find ../pollux-polyglot-native-bridge/target \( -name "*pollux_ffi.dll" -o -name "*pollux_ffi.dylib" -o -name "*pollux_ffi.so" \) | head -n 1)
           mkdir -p lib
+          cp "$LIB_FILE" lib/
           ROOT_DIR="$(pwd -W 2>/dev/null || pwd)"
-          if [ -f "../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll" ]; then
-            cp ../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll lib/
-            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
-            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
-          elif [ -f "../pollux-polyglot-native-bridge/target/release/libpollux_ffi.dylib" ]; then
-            cp ../pollux-polyglot-native-bridge/target/release/libpollux_ffi.dylib lib/
-            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/libpollux_ffi.dylib" >> "$GITHUB_ENV"
-            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/libpollux_ffi.dylib" >> "$GITHUB_ENV"
-          elif [ -f "../pollux-polyglot-native-bridge/target/release/libpollux_ffi.so" ]; then
-            cp ../pollux-polyglot-native-bridge/target/release/libpollux_ffi.so lib/
-            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/libpollux_ffi.so" >> "$GITHUB_ENV"
-            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/libpollux_ffi.so" >> "$GITHUB_ENV"
-          fi
+          LIB_BASENAME="$(basename "$LIB_FILE")"
+          echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/$LIB_BASENAME" >> "$GITHUB_ENV"
+          echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/$LIB_BASENAME" >> "$GITHUB_ENV"
 
       - run: just install
       - run: just check
