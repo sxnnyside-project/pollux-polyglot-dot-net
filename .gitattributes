@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+*.cs text diff=csharp eol=lf
+*.vb text eol=lf
+*.fs text eol=lf
+*.sln text eol=crlf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+*.dll binary
+*.dylib binary
+*.so binary
+*.nupkg binary
+*.snupkg binary

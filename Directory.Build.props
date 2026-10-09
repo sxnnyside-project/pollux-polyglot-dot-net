@@ -1,0 +1,25 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <LangVersion>latest</LangVersion>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Version>0.1.0</Version>
+    <Authors>Sxnnyside Project</Authors>
+    <Company>Sxnnyside Project</Company>
+    <Copyright>© 2026 Sxnnyside Project</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://sxnnysideproject.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/sxnnyside-project/pollux-polyglot-dot-net</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pollux;security;sandboxing;authority;determinism;windows;polyglot</PackageTags>
+    <Description>Deterministic Execution Authority and Sandboxing SDK for the .NET Runtime</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556" PrivateAssets="all" Condition="$(MSBuildProjectExtension) == '.csproj'" />
+  </ItemGroup>
+</Project>

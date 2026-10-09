@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  gate:
+    name: Verify Quality Gate (Windows)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # v1
+        with:
+          toolchain: 1.93.0
+
+      - name: Install just
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: just@1.58.0
+
+      - name: Setup Pollux Core native library
+        run: |
+          git clone --depth 1 https://github.com/sxnnyside-project/pollux-polyglot-native-bridge.git ../pollux-polyglot-native-bridge
+          cargo build --release --manifest-path ../pollux-polyglot-native-bridge/Cargo.toml
+          mkdir -p lib
+          ROOT_DIR="$(pwd -W 2>/dev/null || pwd)"
+          cp ../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll lib/
+          echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
+          echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
+
+      - run: just install
+      - run: just check
+
+  publish:
+    name: Package and Publish
+    needs: gate
+    runs-on: windows-latest
+    environment: production
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # v1
+        with:
+          toolchain: 1.93.0
+
+      - name: Install just
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: just@1.58.0
+
+      - name: Build Native Windows Binary for NuGet Runtime Layout
+        run: |
+          git clone --depth 1 https://github.com/sxnnyside-project/pollux-polyglot-native-bridge.git ../pollux-polyglot-native-bridge
+          cargo build --release --manifest-path ../pollux-polyglot-native-bridge/Cargo.toml
+          mkdir -p runtimes/win-x64/native
+          cp ../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll runtimes/win-x64/native/pollux_ffi.dll
+
+      - name: Build NuGet Package with Bundled Native Runtimes
+        run: just pack
+
+      - name: Publish to NuGet (Trusted Publishing via OIDC)
+        run: |
+          dotnet nuget push ./artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF_NAME:-v0.1.0}"
+          gh release create "$TAG" ./artifacts/*.nupkg \
+            --title "$TAG" \
+            --notes-file CHANGELOG.md \
+            --verify-tag || true

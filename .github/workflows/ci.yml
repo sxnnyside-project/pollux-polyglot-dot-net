@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commits:
+    name: Conventional Commits
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Validate commit messages
+        env:
+          BASE: origin/${{ github.base_ref }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: scripts/check-commit-range.sh "$BASE" "$HEAD"
+
+  check:
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f # v1
+        with:
+          toolchain: 1.93.0
+
+      - name: Install just
+        uses: taiki-e/install-action@183e4297cca2404691e9380e1307288dced5c82a # v2.87.25
+        with:
+          tool: just@1.58.0
+
+      - name: Setup Pollux Core native library
+        run: |
+          git clone --depth 1 https://github.com/sxnnyside-project/pollux-polyglot-native-bridge.git ../pollux-polyglot-native-bridge
+          cargo build --release --manifest-path ../pollux-polyglot-native-bridge/Cargo.toml
+          mkdir -p lib
+          ROOT_DIR="$(pwd -W 2>/dev/null || pwd)"
+          if [ -f "../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll" ]; then
+            cp ../pollux-polyglot-native-bridge/target/release/pollux_ffi.dll lib/
+            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
+            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/pollux_ffi.dll" >> "$GITHUB_ENV"
+          elif [ -f "../pollux-polyglot-native-bridge/target/release/libpollux_ffi.dylib" ]; then
+            cp ../pollux-polyglot-native-bridge/target/release/libpollux_ffi.dylib lib/
+            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/libpollux_ffi.dylib" >> "$GITHUB_ENV"
+            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/libpollux_ffi.dylib" >> "$GITHUB_ENV"
+          elif [ -f "../pollux-polyglot-native-bridge/target/release/libpollux_ffi.so" ]; then
+            cp ../pollux-polyglot-native-bridge/target/release/libpollux_ffi.so lib/
+            echo "POLLUX_CORE_LIB=$ROOT_DIR/lib/libpollux_ffi.so" >> "$GITHUB_ENV"
+            echo "POLLUX_FFI_PATH=$ROOT_DIR/lib/libpollux_ffi.so" >> "$GITHUB_ENV"
+          fi
+
+      - run: just install
+      - run: just check

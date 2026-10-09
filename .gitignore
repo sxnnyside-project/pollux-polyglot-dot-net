@@ -1,0 +1,41 @@
+## .NET Core / C# gitignore
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+.vscode/
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Native binaries built locally
+target/
+lib/
+runtimes/
+*.dylib
+*.so
+*.dll
+
+# Test & Coverage
+TestResults/
+*.trx
+coverage/
+*.cobertura.xml
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+packages/
